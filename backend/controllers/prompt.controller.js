@@ -1,5 +1,6 @@
 const AIService = require("../services/ai.service");
 const AppError = require("../utils/AppError");
+const { Success } = require("../utils/Success");
 require("dotenv").config()
 
 //POST TO CREATE PROMPT
@@ -8,7 +9,7 @@ exports.createPrompt = async (req, res, next) => {
     const { event, weather, style } = req.body;
     try {
         const response = await ai.analyze(req.files, { event, weather, style });
-        res.status(200).json(JSON.parse(response));
+        Success(res,200,"Analyzed Image",JSON.parse(response))
     } catch (err) {
         return next(new AppError(err));
     }

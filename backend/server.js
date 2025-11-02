@@ -1,8 +1,11 @@
 const express = require("express");
 const errorHandler = require("./middleware/errorHandler");
 const promptRouter = require("./routes/prompt.route");
+const { globalLimiter } = require("./middleware/rateLimit");
+require("dotenv").config()
 const app = express();
 app.use(express.json());
+app.use(globalLimiter);
 app.use("/v1/api",promptRouter);
 app.get("/", (req, res) => {
     res.json({ success: true, message: "HOME" });
@@ -17,6 +20,6 @@ app.get("/health",(req,res)=>{
 
 
 app.use(errorHandler);
-app.listen(3000, () => {
+app.listen(process.env.PORT, () => {
     console.log("Server listening on port 3000");
 });

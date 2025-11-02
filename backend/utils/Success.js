@@ -6,6 +6,6 @@
  * @returns {object} The success object.
  */
 
-exports.Success = ({ status = 200, message, data }) => {
-    return { status, message, data };
+exports.Success = (res,status = 200, message, data ) => {
+    return res.status(status).json({success:true,message,data})
 };
