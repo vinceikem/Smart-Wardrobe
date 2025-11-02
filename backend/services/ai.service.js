@@ -7,13 +7,10 @@ class AIService {
         this.model = model;
     }
     getIdFromFileName(fileName) {
-        console.log("ran1")
-        console.log(fileName)
         const id = fileName.split("_")[1].split(".")[0];
         return id;
     }
     generativeImages(images) {
-        console.log("ran2")
         const imageParts = [];
         for (const image of images) {
             imageParts.push({
@@ -28,7 +25,6 @@ class AIService {
     }
 
     async generateContent(images, { style, event, weather }) {
-        console.log("ran3")
         const content = [];
         for (const { id, inlineData } of this.generativeImages(images)) {
             content.push({ text: `ID:${id}` });

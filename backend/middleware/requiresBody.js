@@ -5,3 +5,5 @@ const requiresBody = (req,res,next) => {
         return next(new AppError("JSON body required",400))
     }
 }
+
+module.exports = requiresBody
