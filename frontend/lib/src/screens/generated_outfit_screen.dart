@@ -1,22 +1,21 @@
-// 1. GeneratedOutfitScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../models/wardrobe_item_2.dart'; // Category enum
-import '../models/wardrobe_item.dart' as WardrobeItemModel; // Hive Wardrobe Item
+import '../models/wardrobe_item.dart'; // Hive Wardrobe Item
 import '../models/saved_outfit.dart'; // Hive Saved Outfit
 import '../providers/wardrobe_provider.dart';
-import 'package:frontend/src/services/prompt_service.dart'; // Used for ImageUploadData
+import 'package:frontend/src/services/prompt_service.dart';
+import '../models/image_upload_data.dart';
 
 class GeneratedOutfitScreen extends StatefulWidget {
   final List<ImageUploadData> uploadData;
   final String style;
   final String event;
   final String weather;
-  // NOTE: Assuming your PromptService returns the generated image URL
-  final String generatedImageUrl = 'https://picsum.photos/400/600'; // MOCK URL
+
+  final String generatedImageUrl = '';
 
   const GeneratedOutfitScreen({
     super.key,
@@ -31,37 +30,71 @@ class GeneratedOutfitScreen extends StatefulWidget {
 }
 
 class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
-  // Mock results for Outfit Generation until user provides the service class
-  Future<Map<Category, String>> _mockOutfitFuture() async {
-    await Future.delayed(const Duration(seconds: 2));
-    // Simulate finding mock IDs. NOTE: These IDs must exist in your WardrobeProvider's _items list!
-    return {
-      Category.top: '1', 
-      Category.bottom: '2', 
-      Category.shoe: '3',
-    };
-  }
-
-  Future<String> _mockDescriptionFuture() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return 'This is a mock analysis! The backend suggests a **${widget.style}** outfit for a **${widget.event}**. Integrate your service class to get real results!';
-  }
-  
-  late Future<List<dynamic>> _outfitResultsFuture;
-  Map<Category, WardrobeItemModel.WardrobeItem?> _generatedItems = {}; // Use Hive Model
   bool _isSaving = false;
+
+  late Future<Map<String, dynamic>> _outfitResultFuture;
+
+  Map<Category, WardrobeItem?> _generatedItems = {};
 
   @override
   void initState() {
     super.initState();
-    _outfitResultsFuture = Future.wait([_mockOutfitFuture(), _mockDescriptionFuture()]); 
+    _outfitResultFuture = _callOutfitService();
   }
 
+  // --- Core Service Call Logic (Placeholder) ---
+  Future<Map<String, dynamic>> _callOutfitService() async {
+    final service = PromptService();
+
+    // Simulating API call delay for demonstration
+    await Future.delayed(const Duration(seconds: 2));
+
+    final response = await service.send(
+      uploadImages: widget.uploadData,
+      style: widget.style,
+      event: widget.event,
+      weather: widget.weather,
+    );
+
+    if (response['success'] == true && response['data'] is Map) {
+      final responseData = response['data'] as Map<String, dynamic>;
+
+      final Map<String, String> itemIds = {};
+      String? description;
+
+      responseData.forEach((key, value) {
+        if (key == 'response' && value is String) {
+          description = value;
+        } else if (value is String) {
+          itemIds[key] = value;
+        }
+      });
+
+      if (description == null || itemIds.isEmpty) {
+        // Fallback mock data
+        return {
+          'items': {'top': 'example-top-id', 'bottom': 'example-bottom-id'},
+          'description': 'Placeholder outfit analysis from service.',
+        };
+      }
+
+      return {'items': itemIds, 'description': description};
+    } else {
+      // Fallback mock data on service failure
+      return {
+        'items': {'top': 'example-top-id', 'bottom': 'example-bottom-id'},
+        'description': 'Placeholder outfit analysis (Service call failed).',
+      };
+    }
+  }
+
+  // --- Outfit Save Logic ---
   void _saveOutfit(String description, List<String> itemIds) async {
     if (_isSaving) return;
-    setState(() { _isSaving = true; });
+    setState(() {
+      _isSaving = true;
+    });
 
-    // The new SavedOutfit model requires imageUrl
     final newSavedOutfit = SavedOutfit(
       id: const Uuid().v4(),
       description: description,
@@ -69,83 +102,162 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
       style: widget.style,
       event: widget.event,
       dateSaved: DateTime.now(),
-      imageUrl: widget.generatedImageUrl, // <--- Use the generated URL
+      imageUrl: widget.generatedImageUrl,
     );
 
-    Provider.of<WardrobeProvider>(context, listen: false).saveOutfit(newSavedOutfit);
+    // Mocking the save call
+    await Future.delayed(const Duration(milliseconds: 500));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Outfit saved successfully!')),
-    );
-    
-    // Optionally pop the screen after saving
-    Navigator.of(context).pop(); 
-    
-    setState(() { _isSaving = false; });
+    Provider.of<WardrobeProvider>(
+      context,
+      listen: false,
+    ).saveOutfit(newSavedOutfit);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Outfit saved successfully!')),
+      );
+
+      Navigator.of(context).pop();
+    }
+
+    setState(() {
+      _isSaving = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Generated Outfit'),
+        title: const Text(
+          'Generated Outfit',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.pinkAccent,
+        elevation: 0,
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: _outfitResultsFuture,
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _outfitResultFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.pink));
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final generatedItemIds = snapshot.data![0] as Map<Category, String>;
-            final description = snapshot.data![1] as String;
-            
-            final provider = context.read<WardrobeProvider>();
-            
-            // Map the Category enum to the Hive model instance
-            final itemsMap = generatedItemIds.map(
-              (key, value) => MapEntry(key, provider.items.cast<WardrobeItemModel.WardrobeItem?>().firstWhere(
-                (item) => item?.id == value, 
-                orElse: () => null // Handle item not found
-              )),
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.pinkAccent),
+                  SizedBox(height: 16),
+                  Text(
+                    'Generating the perfect outfit...',
+                    style: TextStyle(color: Colors.pinkAccent, fontSize: 16),
+                  ),
+                ],
+              ),
             );
-            
-            _generatedItems = Map<Category, WardrobeItemModel.WardrobeItem?>.from(itemsMap.cast());
-            final itemIdsList = generatedItemIds.values.toList();
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Text(
+                  'Service Error: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red, fontSize: 16),
+                ),
+              ),
+            );
+          } else if (snapshot.hasData) {
+            final generatedItemIdsMap =
+                snapshot.data!['items'] as Map<String, String>;
+            final description = snapshot.data!['description'] as String;
 
+            final itemIdsList = generatedItemIdsMap.values.toList();
+            final provider = context.read<WardrobeProvider>();
+
+            _generatedItems = {};
+            generatedItemIdsMap.forEach((key, itemId) {
+              final category = Category.values.firstWhere(
+                (e) => e.toString().split('.').last == key,
+                orElse: () => Category.accessory,
+              );
+
+              final item = provider.items.cast<WardrobeItem?>().firstWhere(
+                (i) => i?.id == itemId,
+                orElse: () => null,
+              );
+              _generatedItems[category] = item;
+            });
 
             return _buildOutfitDisplay(description, itemIdsList);
           }
-          return const SizedBox.shrink(); 
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 
+  // --- Display Widgets ---
+
   Widget _buildOutfitDisplay(String description, List<String> itemIdsList) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.only(bottom: 24.0), // Extra space at bottom
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildGeneratedImage(), // New Widget for the main image
-          const SizedBox(height: 24),
+          // 1. Individual Item Cards (Horizontal Scroll)
+          const Padding(
+            // Adjusted top padding to look clean at the top of the scroll view
+            padding: EdgeInsets.only(left: 16.0, top: 16.0, bottom: 8.0),
+            child: Text(
+              'Selected Items from Your Wardrobe',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
           _buildItemStack(),
+
+          // 2. Analysis Card
           const SizedBox(height: 24),
           _buildAnalysisCard(description),
+
+          // 3. Save Button
           const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _isSaving ? null : () => _saveOutfit(description, itemIdsList),
-            icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.favorite),
-            label: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Text(_isSaving ? 'Saving...' : 'Save This Outfit', style: const TextStyle(fontSize: 18)),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: _isSaving
+                  ? null
+                  : () => _saveOutfit(description, itemIdsList),
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Icon(Icons.favorite),
+              label: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Text(
+                  _isSaving ? 'Saving...' : 'Save This Outfit',
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal.shade400,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                elevation: 6,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
             ),
           ),
         ],
@@ -153,112 +265,189 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
     );
   }
 
-  Widget _buildGeneratedImage() {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          widget.generatedImageUrl,
-          height: 300,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              height: 300,
-              color: Colors.grey.shade200,
-              child: const Center(child: CircularProgressIndicator()),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-
+  // --- Item Stack Widget (Displays local images horizontally with increased size) ---
   Widget _buildItemStack() {
     final List<Widget> itemWidgets = [];
-    final orderedCategories = [Category.top, Category.bottom, Category.shoe];
-    
-    for (var cat in orderedCategories) {
-      final item = _generatedItems[cat];
-      if (item != null) {
-        itemWidgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: Container(
-              width: 100, // Fixed width for horizontal stack
-              height: 120,
-              decoration: BoxDecoration(
-                // CRITICAL CHANGE: Use image path instead of color
-                image: item.imagePath != null && File(item.imagePath).existsSync()
-                    ? DecorationImage(
-                        image: FileImage(File(item.imagePath)),
-                        fit: BoxFit.cover,
+    final orderedCategories = [
+      Category.top,
+      Category.bottom,
+      Category.shoe,
+      Category.accessory,
+    ];
+
+    final recommendedItems = orderedCategories
+        .map((cat) => _generatedItems[cat])
+        .where((item) => item != null)
+        .cast<WardrobeItem>()
+        .toList();
+
+    for (var item in recommendedItems) {
+      final Uint8List? imageData = item.imageData;
+      final hasImage = imageData != null && imageData.isNotEmpty;
+      final categoryString = item.category.toString().split('.').last;
+
+      itemWidgets.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Column(
+            children: [
+              Container(
+                width: 100,
+                height: 120,
+                decoration: BoxDecoration(
+                  image: hasImage
+                      ? DecorationImage(
+                          image: MemoryImage(imageData),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                  color: hasImage ? null : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.pink.shade100, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: !hasImage
+                    ? Center(
+                        child: Icon(
+                          Icons.checkroom,
+                          color: Colors.pinkAccent.withOpacity(0.6),
+                          size: 36,
+                        ),
                       )
                     : null,
-                color: Colors.grey.shade300, // Fallback color
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
               ),
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                   if (item.imagePath == null || !File(item.imagePath).existsSync())
-                       Center(child: Icon(Icons.checkroom, color: Colors.grey.shade600, size: 48)),
-                  
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
-                    ),
-                    child: Text(
-                      item.category, // Display the string category
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 4),
+              Text(
+                categoryString.substring(0, 1).toUpperCase() +
+                    categoryString.substring(1),
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+            ],
           ),
-        );
-      }
+        ),
+      );
     }
-    // Change to horizontal view to save space and display items side-by-side
+
+    if (itemWidgets.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.0),
+        child: Center(
+          child: Text(
+            "No recommended items found in your wardrobe for this request.",
+          ),
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: itemWidgets,
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: Row(children: itemWidgets),
+    );
+  }
+
+  // --- Analysis Card Widget ---
+  Widget _buildAnalysisCard(String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'AI Style Analysis',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.pinkAccent,
+                ),
+              ),
+              const Divider(color: Colors.pinkAccent, height: 20),
+
+              _buildDetailRow(
+                Icons.color_lens,
+                'Style',
+                widget.style,
+                Colors.pink,
+              ),
+              _buildDetailRow(Icons.event, 'Event', widget.event, Colors.teal),
+              _buildDetailRow(
+                Icons.cloud,
+                'Weather',
+                widget.weather,
+                Colors.blue,
+              ),
+
+              const SizedBox(height: 16),
+
+              const Text(
+                'Recommendation Rationale:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              Text(
+                description,
+                style: const TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.black54,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildAnalysisCard(String description) {
-    // ... (No major change, uses same logic)
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Style Analysis (Mock)',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink),
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            const Divider(),
-            Text('Style: ${widget.style}'),
-            Text('Event: ${widget.event}'),
-            const SizedBox(height: 12),
-            Text(description),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

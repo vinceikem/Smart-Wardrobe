@@ -35,6 +35,7 @@ class SavedOutfit extends HiveObject {
     required this.imageUrl, // New required field
   });
 
-  /// The key used for storing in Hive: "outfit-<id>"
+  /// The key used for storing in Hive: "outfit- `<`id>"
+  @override
   String get key => 'outfit-$id';
 }

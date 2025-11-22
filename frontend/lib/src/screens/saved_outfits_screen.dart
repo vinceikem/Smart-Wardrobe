@@ -1,12 +1,12 @@
-// 2. SavedOutfitsScreen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
-import '../models/saved_outfit.dart'; // Hive Saved Outfit
-import '../models/wardrobe_item.dart' as WardrobeItemModel; // Hive Wardrobe Item
+import 'dart:typed_data'; // Required for Uint8List and MemoryImage
+
+import '../models/saved_outfit.dart';
+import '../models/wardrobe_item.dart';
 import '../providers/wardrobe_provider.dart';
+import 'wardrobe_item_detail_screen.dart'; // Detail screen import
 
 class SavedOutfitsScreen extends StatelessWidget {
   const SavedOutfitsScreen({super.key});
@@ -14,22 +14,45 @@ class SavedOutfitsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final savedOutfits = context.watch<WardrobeProvider>().savedOutfits;
-    final provider = context.read<WardrobeProvider>(); // For accessing individual items
+    final provider = context.read<WardrobeProvider>();
 
     return Scaffold(
+      backgroundColor: Colors.grey[50], // Sleek background
       appBar: AppBar(
-        title: const Text('My Saved Outfits'),
+        title: const Text(
+          'My Collection',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: savedOutfits.isEmpty
-          ? const Center(
-              child: Text(
-                'No outfits saved yet.\nGenerate one and click "Save!"',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.style_outlined, size: 64, color: Colors.grey[300]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No outfits saved yet.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Generate one and click "Save!"',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  ),
+                ],
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               itemCount: savedOutfits.length,
               itemBuilder: (context, index) {
                 final outfit = savedOutfits[index];
@@ -43,112 +66,162 @@ class SavedOutfitsScreen extends StatelessWidget {
 class SavedOutfitCard extends StatelessWidget {
   final SavedOutfit outfit;
   final WardrobeProvider provider;
-  
+
   const SavedOutfitCard({
     required this.outfit,
     required this.provider,
     super.key,
   });
-  
-  // NOTE: This getter now returns the Hive Wardrobe Item model
-  List<WardrobeItemModel.WardrobeItem> get items {
-    // Find WardrobeItems using the IDs stored in the outfit
+
+  List<WardrobeItem> get items {
+    // Look up the full item objects using the stored IDs
     return outfit.itemIds
-        .map((id) => provider.items.cast<WardrobeItemModel.WardrobeItem?>().firstWhere(
-              (item) => item?.id == id,
-              orElse: () => null,
-            ))
-        .whereType<WardrobeItemModel.WardrobeItem>() // Filter out nulls
+        .map(
+          (id) => provider.items.cast<WardrobeItem?>().firstWhere(
+            (item) => item?.id == id,
+            orElse: () => null,
+          ),
+        )
+        .whereType<WardrobeItem>()
         .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Display the Generated Outfit Image prominently
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: Image.network(
-              outfit.imageUrl,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 200,
-                color: Colors.grey.shade200,
-                child: const Center(child: Text('Image Error', style: TextStyle(color: Colors.red))),
-              ),
-            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Header: Style Name and Date ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${outfit.style} Style',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal),
+                      outfit.style,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                    Text(
-                      // Requires 'intl' package for DateFormat
-                      'Saved: ${DateFormat('MMM d, yyyy').format(outfit.dateSaved)}', 
-                      style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        outfit.event.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[800],
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                Text(
-                  'For: ${outfit.event}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              Text(
+                DateFormat('MMM d').format(outfit.dateSaved),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[400],
                 ),
-                const Divider(height: 20),
-                Text(
-                  'Description: ${outfit.description}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 16),
-                
-                // 3. Item Stack Display (smaller visual confirmation)
-                SizedBox(
-                  height: 60,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      final fileExists = File(item.imagePath).existsSync();
+              ),
+            ],
+          ),
 
-                      return Container(
-                        width: 60,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          // Use the item image path
-                          image: fileExists
-                              ? DecorationImage(
-                                  image: FileImage(File(item.imagePath)),
-                                  fit: BoxFit.cover,
-                                )
-                              : null,
-                          color: Colors.grey.shade300, // Fallback color
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: fileExists ? null : const Icon(Icons.image_not_supported, size: 24, color: Colors.white70),
-                        ),
-                      );
-                    },
+          const SizedBox(height: 16),
+
+          // --- Description ---
+          Text(
+            outfit.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.5,
+              color: Colors.grey[600],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+          Divider(height: 1, color: Colors.grey[100]),
+          const SizedBox(height: 20),
+
+          // --- Item Stack Display ---
+          SizedBox(
+            height: 80,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: items.length,
+              itemBuilder: (context, index) {
+                final item = items[index];
+                final bool hasImageData =
+                    item.imageData != null && item.imageData!.isNotEmpty;
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            WardrobeItemDetailScreen(item: item),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 80,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200, width: 1),
+                      image: hasImageData
+                          ? DecorationImage(
+                              image: MemoryImage(item.imageData!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: hasImageData
+                        ? null
+                        : Center(
+                            child: Icon(
+                              Icons.checkroom,
+                              size: 24,
+                              color: Colors.grey[300],
+                            ),
+                          ),
                   ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         ],

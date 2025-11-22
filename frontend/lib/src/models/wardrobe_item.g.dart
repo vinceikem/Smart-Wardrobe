@@ -19,7 +19,7 @@ class WardrobeItemAdapter extends TypeAdapter<WardrobeItem> {
     return WardrobeItem(
       id: fields[0] as String,
       category: fields[1] as String,
-      imagePath: fields[2] as String,
+      imageData: fields[2] as Uint8List?,
       createdAt: fields[3] as DateTime,
     );
   }
@@ -33,7 +33,7 @@ class WardrobeItemAdapter extends TypeAdapter<WardrobeItem> {
       ..writeByte(1)
       ..write(obj.category)
       ..writeByte(2)
-      ..write(obj.imagePath)
+      ..write(obj.imageData)
       ..writeByte(3)
       ..write(obj.createdAt);
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 part 'wardrobe_item.g.dart';
@@ -11,7 +12,7 @@ class WardrobeItem extends HiveObject {
   final String category;
 
   @HiveField(2)
-  final String imagePath;
+  final Uint8List? imageData;
 
   @HiveField(3)
   final DateTime createdAt;
@@ -19,10 +20,11 @@ class WardrobeItem extends HiveObject {
   WardrobeItem({
     required this.id,
     required this.category,
-    required this.imagePath,
+    required this.imageData,
     required this.createdAt,
   });
 
-  /// Key format used throughout the app: "<category>-<id>"
+  /// Key format used throughout the app: "<'category>-<'id>"
+  @override
   String get key => '$category-$id';
 }

@@ -7,8 +7,7 @@ class AIService {
         this.model = model;
     }
     getIdFromFileName(fileName) {
-        const id = fileName.split("_")[1].split(".")[0];
-        return id;
+        return fileName;
     }
     generativeImages(images) {
         const imageParts = [];
@@ -27,7 +26,8 @@ class AIService {
     async generateContent(images, { style, event, weather }) {
         const content = [];
         for (const { id, inlineData } of this.generativeImages(images)) {
-            content.push({ text: `ID:${id}` });
+            const data = id.split('-');
+            content.push({ text: `category:${data[0]}  id:${data[1]}` });
             content.push({ inlineData });
         }
         content.push({
@@ -45,18 +45,18 @@ class AIService {
             contents: await this.generateContent(images, config),
             config: {
                 systemInstruction:
-                    "You are a wardrobe matcher/analyzer picking the best combinations based on given parameters.Style,Event and Weather, each field optional. Suggest best combination by the ID Supplied in the prompt",
+                    "You are a wardrobe matcher/analyzer picking the best combinations based on given parameters.Style,Event and Weather, each field optional. Suggest best combination by the ID Supplied in the prompt. Suggest polite tips to optimize the selection given like stain or crease detection etc. for only selected items. Do not mention ids in description use visual cues instead",
                 responseMimeType: "application/json",
                 responseJsonSchema: {
                     type: Type.OBJECT,
                     properties: {
                         top: {
                             type: Type.STRING,
-                            description: "The best from all top id",
+                            description: "The best from all top id respond in the full id given including []",
                         },
                         bottom: {
                             type: Type.STRING,
-                            description: "The best from all bottom id",
+                            description: "The best from all bottom id respond in the full id given including []",
                         },
                         response:{
                             type:Type.STRING,

@@ -1,35 +1,35 @@
-// wardrobe_grid_screen.dart (Modified File)
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../models/wardrobe_item_2.dart';
-import '../models/wardrobe_item.dart' as WardrobeItemModel;
+import 'dart:typed_data'; // Required for Uint8List and Image.memory
+
+import '../models/wardrobe_item_2.dart'; // Contains Category enum
+import '../models/wardrobe_item.dart'; // Contains Hive Model (WardrobeItem)
 import '../providers/wardrobe_provider.dart';
-import 'wardrobe_item_detail_screen.dart'; // <-- New Import
+import 'wardrobe_item_detail_screen.dart'; // Detail screen for navigation
 
 class WardrobeGridScreen extends StatelessWidget {
   const WardrobeGridScreen({super.key});
 
-  // ... (Keep _getCategoryIcon and _getCategoryEnum methods here) ...
-
   IconData _getCategoryIcon(Category cat) {
     switch (cat) {
       case Category.top:
-        return Icons.catching_pokemon;
+        return Icons.checkroom;
       case Category.bottom:
         return Icons.straighten;
       case Category.shoe:
-        return Icons.shower;
+        return Icons.do_not_step;
       case Category.accessory:
-        return Icons.watch_outlined;
+        return Icons.watch;
     }
   }
 
   Category _getCategoryEnum(String categoryString) {
     try {
       return Category.values.firstWhere(
-        (e) => e.toString().split('.').last == categoryString,
+        (e) =>
+            e.toString().split('.').last.toLowerCase() ==
+            categoryString.toLowerCase(),
         orElse: () => Category.top,
       );
     } catch (e) {
@@ -40,42 +40,65 @@ class WardrobeGridScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = context.watch<WardrobeProvider>().items;
-    final displayItems = items.reversed.toList();
+    final displayItems = items.cast<WardrobeItem>().reversed.toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Wardrobe Items')),
+      backgroundColor: Colors.grey[50], // Sleek background
+      appBar: AppBar(
+        title: const Text(
+          'My Wardrobe',
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
+      ),
       body: displayItems.isEmpty
-          ? const Center(
-              child: Text(
-                'Your wardrobe is empty!\nAdd your first item.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.checkroom_outlined,
+                    size: 64,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Your wardrobe is empty!',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add your first item to get started.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  ),
+                ],
               ),
             )
           : GridView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 12.0,
-                mainAxisSpacing: 12.0,
-                childAspectRatio: 0.8,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.75, // Taller cards for a better look
               ),
               itemCount: displayItems.length,
               itemBuilder: (context, index) {
-                final item =
-                    displayItems[index] as WardrobeItemModel.WardrobeItem;
+                final item = displayItems[index];
                 final categoryEnum = _getCategoryEnum(item.category);
 
                 return GestureDetector(
-                  // <-- WRAP CARD IN DETECTOR
                   onTap: () {
-                    // Navigate to the detail screen on tap
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (ctx) => WardrobeItemDetailScreen(
-                          item: item,
-                          categoryEnum: categoryEnum,
-                        ),
+                        builder: (ctx) => WardrobeItemDetailScreen(item: item),
                       ),
                     );
                   },
@@ -91,9 +114,8 @@ class WardrobeGridScreen extends StatelessWidget {
   }
 }
 
-// Keep WardrobeGridCard definition below (it doesn't need changes from the last iteration)
 class WardrobeGridCard extends StatelessWidget {
-  final WardrobeItemModel.WardrobeItem item;
+  final WardrobeItem item;
   final IconData icon;
   final Category categoryEnum;
 
@@ -106,53 +128,54 @@ class WardrobeGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageFile = File(item.imagePath);
+    final Uint8List? imageData = item.imageData;
+    final bool hasImageData = imageData != null && imageData.isNotEmpty;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(16),
-                ),
-                child: imageFile.existsSync()
-                    ? Image.file(
-                        imageFile,
+              child: Container(
+                width: double.infinity,
+                color: Colors.grey[50],
+                child: hasImageData
+                    ? Image.memory(
+                        imageData!,
                         fit: BoxFit.cover,
-                        width: double.infinity,
                         errorBuilder: (context, error, stackTrace) {
                           return Center(
                             child: Icon(
                               icon,
-                              size: 64,
-                              color: Colors.grey.shade600,
+                              size: 40,
+                              color: Colors.grey[300],
                             ),
                           );
                         },
                       )
                     : Center(
-                        child: Icon(
-                          icon,
-                          size: 64,
-                          color: Colors.grey.shade600,
-                        ),
+                        child: Icon(icon, size: 40, color: Colors.grey[300]),
                       ),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -161,12 +184,17 @@ class WardrobeGridCard extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Added: ${DateFormat('MMM d, yyyy').format(item.createdAt)}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  DateFormat('MMM d').format(item.createdAt),
+                  style: TextStyle(
+                    color: Colors.grey[400],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
