@@ -17,8 +17,10 @@ class AIService {
                     data: image.buffer.toString("base64"),
                     mimeType: image.mimetype,
                 },
-                id: this.getIdFromFileName(image.filename),
+                id: this.getIdFromFileName(image.originalname),
+        
             });
+            console.log(image.originalname);
         }
         return imageParts;
     }
