@@ -1,17 +1,22 @@
+// 1. GeneratedOutfitScreen.dart
+
 import 'package:flutter/material.dart';
-import 'package:frontend/src/services/prompt_service.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import '../models/wardrobe_item.dart';
-import '../models/saved_outfit.dart';
+import 'dart:io';
+import '../models/wardrobe_item_2.dart'; // Category enum
+import '../models/wardrobe_item.dart' as WardrobeItemModel; // Hive Wardrobe Item
+import '../models/saved_outfit.dart'; // Hive Saved Outfit
 import '../providers/wardrobe_provider.dart';
-// import '../services/outfit_service.dart'; // DO NOT INCLUDE - User will replace
+import 'package:frontend/src/services/prompt_service.dart'; // Used for ImageUploadData
 
 class GeneratedOutfitScreen extends StatefulWidget {
   final List<ImageUploadData> uploadData;
   final String style;
   final String event;
   final String weather;
+  // NOTE: Assuming your PromptService returns the generated image URL
+  final String generatedImageUrl = 'https://picsum.photos/400/600'; // MOCK URL
 
   const GeneratedOutfitScreen({
     super.key,
@@ -29,7 +34,7 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
   // Mock results for Outfit Generation until user provides the service class
   Future<Map<Category, String>> _mockOutfitFuture() async {
     await Future.delayed(const Duration(seconds: 2));
-    // Simulate finding one of the mock IDs from the provider
+    // Simulate finding mock IDs. NOTE: These IDs must exist in your WardrobeProvider's _items list!
     return {
       Category.top: '1', 
       Category.bottom: '2', 
@@ -42,23 +47,21 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
     return 'This is a mock analysis! The backend suggests a **${widget.style}** outfit for a **${widget.event}**. Integrate your service class to get real results!';
   }
   
-  late Future<Map<Category, String>> _outfitFuture;
-  late Future<String> _descriptionFuture;
-  Map<Category, WardrobeItem> _generatedItems = {};
+  late Future<List<dynamic>> _outfitResultsFuture;
+  Map<Category, WardrobeItemModel.WardrobeItem?> _generatedItems = {}; // Use Hive Model
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    // Use mock future calls until the user adds their service class
-    _outfitFuture = _mockOutfitFuture(); 
-    _descriptionFuture = _mockDescriptionFuture();
+    _outfitResultsFuture = Future.wait([_mockOutfitFuture(), _mockDescriptionFuture()]); 
   }
 
   void _saveOutfit(String description, List<String> itemIds) async {
     if (_isSaving) return;
     setState(() { _isSaving = true; });
 
+    // The new SavedOutfit model requires imageUrl
     final newSavedOutfit = SavedOutfit(
       id: const Uuid().v4(),
       description: description,
@@ -66,6 +69,7 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
       style: widget.style,
       event: widget.event,
       dateSaved: DateTime.now(),
+      imageUrl: widget.generatedImageUrl, // <--- Use the generated URL
     );
 
     Provider.of<WardrobeProvider>(context, listen: false).saveOutfit(newSavedOutfit);
@@ -73,6 +77,9 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Outfit saved successfully!')),
     );
+    
+    // Optionally pop the screen after saving
+    Navigator.of(context).pop(); 
     
     setState(() { _isSaving = false; });
   }
@@ -84,7 +91,7 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
         title: const Text('Generated Outfit'),
       ),
       body: FutureBuilder<List<dynamic>>(
-        future: Future.wait([_outfitFuture, _descriptionFuture]),
+        future: _outfitResultsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Colors.pink));
@@ -95,16 +102,22 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
             final description = snapshot.data![1] as String;
             
             final provider = context.read<WardrobeProvider>();
-            final items = generatedItemIds.map(
-              (key, value) => MapEntry(key, provider.getItemById(value)),
+            
+            // Map the Category enum to the Hive model instance
+            final itemsMap = generatedItemIds.map(
+              (key, value) => MapEntry(key, provider.items.cast<WardrobeItemModel.WardrobeItem?>().firstWhere(
+                (item) => item?.id == value, 
+                orElse: () => null // Handle item not found
+              )),
             );
-            _generatedItems = Map<Category, WardrobeItem>.from(items.cast());
+            
+            _generatedItems = Map<Category, WardrobeItemModel.WardrobeItem?>.from(itemsMap.cast());
             final itemIdsList = generatedItemIds.values.toList();
 
 
             return _buildOutfitDisplay(description, itemIdsList);
           }
-          return const SizedBox.shrink(); // Should not happen
+          return const SizedBox.shrink(); 
         },
       ),
     );
@@ -116,6 +129,8 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildGeneratedImage(), // New Widget for the main image
+          const SizedBox(height: 24),
           _buildItemStack(),
           const SizedBox(height: 24),
           _buildAnalysisCard(description),
@@ -138,6 +153,30 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
     );
   }
 
+  Widget _buildGeneratedImage() {
+    return Card(
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          widget.generatedImageUrl,
+          height: 300,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              height: 300,
+              color: Colors.grey.shade200,
+              child: const Center(child: CircularProgressIndicator()),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+
   Widget _buildItemStack() {
     final List<Widget> itemWidgets = [];
     final orderedCategories = [Category.top, Category.bottom, Category.shoe];
@@ -147,29 +186,60 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
       if (item != null) {
         itemWidgets.add(
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
             child: Container(
+              width: 100, // Fixed width for horizontal stack
               height: 120,
               decoration: BoxDecoration(
-                color: item.visualColor, // Use item color
+                // CRITICAL CHANGE: Use image path instead of color
+                image: item.imagePath != null && File(item.imagePath).existsSync()
+                    ? DecorationImage(
+                        image: FileImage(File(item.imagePath)),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+                color: Colors.grey.shade300, // Fallback color
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
               ),
-              child: Center(
-                child: Text(
-                  item.category.display,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                   if (item.imagePath == null || !File(item.imagePath).existsSync())
+                       Center(child: Icon(Icons.checkroom, color: Colors.grey.shade600, size: 48)),
+                  
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+                    ),
+                    child: Text(
+                      item.category, // Display the string category
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         );
       }
     }
-    return Column(children: itemWidgets);
+    // Change to horizontal view to save space and display items side-by-side
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: itemWidgets,
+      ),
+    );
   }
 
   Widget _buildAnalysisCard(String description) {
+    // ... (No major change, uses same logic)
     return Card(
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

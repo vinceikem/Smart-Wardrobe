@@ -1,10 +1,17 @@
+// wardrobe_grid_screen.dart (Modified File)
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/wardrobe_item.dart';
+import 'package:intl/intl.dart';
+import '../models/wardrobe_item_2.dart';
+import '../models/wardrobe_item.dart' as WardrobeItemModel;
 import '../providers/wardrobe_provider.dart';
+import 'wardrobe_item_detail_screen.dart'; // <-- New Import
 
 class WardrobeGridScreen extends StatelessWidget {
   const WardrobeGridScreen({super.key});
+
+  // ... (Keep _getCategoryIcon and _getCategoryEnum methods here) ...
 
   IconData _getCategoryIcon(Category cat) {
     switch (cat) {
@@ -16,20 +23,28 @@ class WardrobeGridScreen extends StatelessWidget {
         return Icons.shower;
       case Category.accessory:
         return Icons.watch_outlined;
-      default:
-        return Icons.category_outlined;
+    }
+  }
+
+  Category _getCategoryEnum(String categoryString) {
+    try {
+      return Category.values.firstWhere(
+        (e) => e.toString().split('.').last == categoryString,
+        orElse: () => Category.top,
+      );
+    } catch (e) {
+      return Category.top;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final items = context.watch<WardrobeProvider>().items.reversed.toList();
+    final items = context.watch<WardrobeProvider>().items;
+    final displayItems = items.reversed.toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Wardrobe Items'),
-      ),
-      body: items.isEmpty
+      appBar: AppBar(title: const Text('My Wardrobe Items')),
+      body: displayItems.isEmpty
           ? const Center(
               child: Text(
                 'Your wardrobe is empty!\nAdd your first item.',
@@ -45,12 +60,30 @@ class WardrobeGridScreen extends StatelessWidget {
                 mainAxisSpacing: 12.0,
                 childAspectRatio: 0.8,
               ),
-              itemCount: items.length,
+              itemCount: displayItems.length,
               itemBuilder: (context, index) {
-                final item = items[index];
-                return WardrobeGridCard(
-                  item: item,
-                  icon: _getCategoryIcon(item.category),
+                final item =
+                    displayItems[index] as WardrobeItemModel.WardrobeItem;
+                final categoryEnum = _getCategoryEnum(item.category);
+
+                return GestureDetector(
+                  // <-- WRAP CARD IN DETECTOR
+                  onTap: () {
+                    // Navigate to the detail screen on tap
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => WardrobeItemDetailScreen(
+                          item: item,
+                          categoryEnum: categoryEnum,
+                        ),
+                      ),
+                    );
+                  },
+                  child: WardrobeGridCard(
+                    item: item,
+                    icon: _getCategoryIcon(categoryEnum),
+                    categoryEnum: categoryEnum,
+                  ),
                 );
               },
             ),
@@ -58,38 +91,63 @@ class WardrobeGridScreen extends StatelessWidget {
   }
 }
 
+// Keep WardrobeGridCard definition below (it doesn't need changes from the last iteration)
 class WardrobeGridCard extends StatelessWidget {
-  final WardrobeItem item;
+  final WardrobeItemModel.WardrobeItem item;
   final IconData icon;
+  final Category categoryEnum;
 
   const WardrobeGridCard({
     required this.item,
     required this.icon,
+    required this.categoryEnum,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
+    final imageFile = File(item.imagePath);
+
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: item.visualColor, // Use the visualColor
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Center(
-                child: Icon(
-                  icon,
-                  size: 64,
-                  color: Colors.white,
+                color: Colors.grey.shade300,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
                 ),
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                child: imageFile.existsSync()
+                    ? Image.file(
+                        imageFile,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              icon,
+                              size: 64,
+                              color: Colors.grey.shade600,
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Icon(
+                          icon,
+                          size: 64,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -99,7 +157,7 @@ class WardrobeGridCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.category.display,
+                  categoryEnum.display,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -107,11 +165,8 @@ class WardrobeGridCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Color ID: ${item.visualColor.value.toRadixString(16).toUpperCase().substring(2)}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  'Added: ${DateFormat('MMM d, yyyy').format(item.createdAt)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),

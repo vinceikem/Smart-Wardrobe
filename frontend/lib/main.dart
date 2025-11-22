@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/src/models/wardrobe_item.dart';
 import 'package:frontend/src/providers/wardrobe_provider.dart';
 import 'package:frontend/src/screens/home_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -10,6 +11,8 @@ void main() async{
    WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   // We wrap the entire app in the WardrobeProvider
+  Hive.registerAdapter(WardrobeItemAdapter());
+  await Hive.openBox<WardrobeItem>('wardrobe');
   runApp(
     ChangeNotifierProvider(
       create: (context) => WardrobeProvider(),

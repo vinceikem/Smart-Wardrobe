@@ -26,19 +26,11 @@ class PromptService {
 
   // CRITICAL FIX: The API endpoint must include the http:// or https:// scheme
   final String apiEndpoint = "http://10.188.85.143:3000/v1/api/prompt";
-
-  // Use the new custom list of image data
-  List<ImageUploadData> images;
-  String? event;
-  String? style;
-  String? weather;
-
-  // Constructor
-  PromptService(this.images, this.event, this.style, this.weather);
+  
+  // NOTE: REMOVED the constructor and internal fields (images, event, style, weather)
 
   /// Converts ImageUploadData objects into a List of MultipartFile objects.
-  /// Returns a non-nullable list.
-  Future<List<MultipartFile>> _filesToUpload() async {
+  Future<List<MultipartFile>> _filesToUpload(List<ImageUploadData> images) async {
     List<MultipartFile> result = [];
 
     for (ImageUploadData data in images) {
@@ -49,18 +41,22 @@ class PromptService {
       // 2. Create the MultipartFile
       result.add(
         await MultipartFile.fromFile(
-          data.file.path, // Use the temporary path for the file content
-          filename:
-              data.originalFilename, // <-- Use the stored original name here
+          data.file.path, 
+          filename: data.originalFilename, 
           contentType: contentType,
         ),
       );
     }
-    print(result[0].filename);
     return result;
   }
 
-  Future<Map<String, dynamic>> send() async {
+  // CRITICAL CHANGE: Send now accepts all parameters directly
+  Future<Map<String, dynamic>> send({
+    required List<ImageUploadData> uploadImages,
+    required String? event,
+    required String? style,
+    required String? weather,
+  }) async {
     var formData = FormData.fromMap({
       // Text fields
       'event': event,
@@ -68,12 +64,11 @@ class PromptService {
       'weather': weather,
 
       // The file list. Key must match the backend's expected array field name.
-      'wardrobe': await _filesToUpload(),
+      'wardrobe': await _filesToUpload(uploadImages), // Pass the list here
     });
 
     try {
       Response response = await _dio.post(
-        // Use the static dio instance
         apiEndpoint,
         data: formData,
         onSendProgress: (sent, total) {

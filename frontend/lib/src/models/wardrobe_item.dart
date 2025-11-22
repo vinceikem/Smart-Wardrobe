@@ -1,25 +1,28 @@
-import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
-// Categories for wardrobe items
-enum Category {
-  top('Top'),
-  bottom('Bottom'),
-  shoe('Shoe'),
-  accessory('Accessory');
+part 'wardrobe_item.g.dart';
 
-  final String display;
-  const Category(this.display);
-}
-
-// Model for a single wardrobe item, using Color for simple UI visualization
-class WardrobeItem {
+@HiveType(typeId: 0)
+class WardrobeItem extends HiveObject {
+  @HiveField(0)
   final String id;
-  final Category category;
-  final Color visualColor; // Used as a visual placeholder for the image/item
+
+  @HiveField(1)
+  final String category;
+
+  @HiveField(2)
+  final String imagePath;
+
+  @HiveField(3)
+  final DateTime createdAt;
 
   WardrobeItem({
     required this.id,
     required this.category,
-    required this.visualColor,
+    required this.imagePath,
+    required this.createdAt,
   });
+
+  /// Key format used throughout the app: "<category>-<id>"
+  String get key => '$category-$id';
 }

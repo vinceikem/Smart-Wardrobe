@@ -1,52 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../models/wardrobe_item.dart';
+// Contains Category enum
+import '../models/wardrobe_item_2.dart'; 
+// Alias for the new Hive model
+import '../models/wardrobe_item.dart' as HiveItem; 
 import '../models/saved_outfit.dart';
 
 class WardrobeProvider extends ChangeNotifier {
-  final List<WardrobeItem> _items = [];
+  // CRITICAL CHANGE: The list now holds the Hive model type
+  final List<HiveItem.WardrobeItem> _items = [];
   final List<SavedOutfit> _savedOutfits = [];
   
-  List<WardrobeItem> get items => _items;
+  // Update the getter type to reflect the Hive model
+  List<HiveItem.WardrobeItem> get items => _items; 
   List<SavedOutfit> get savedOutfits => _savedOutfits.reversed.toList(); 
 
   WardrobeProvider() {
-    // Adding mock data for initial display:
-    _items.addAll([
-      WardrobeItem(id: '1', category: Category.top, visualColor: Colors.blueGrey),
-      WardrobeItem(id: '2', category: Category.bottom, visualColor: Colors.black),
-      WardrobeItem(id: '3', category: Category.shoe, visualColor: Colors.brown),
-      WardrobeItem(id: '4', category: Category.top, visualColor: Colors.red.shade900),
-      WardrobeItem(id: '5', category: Category.top, visualColor: Colors.green.shade700),
-      WardrobeItem(id: '6', category: Category.bottom, visualColor: Colors.grey),
-      WardrobeItem(id: '7', category: Category.shoe, visualColor: Colors.yellow.shade800),
-      WardrobeItem(id: '8', category: Category.accessory, visualColor: Colors.orange),
-    ]);
+    // Mock data has been removed.
+    // Future step: Load initial data from Hive here.
   }
 
   // --- Wardrobe Item Management ---
 
-  void addItem(Category category, Color color) {
-    final newItem = WardrobeItem(
+  // Refactored to accept imagePath (String) instead of Color
+  void addItem(Category category, String imagePath) {
+    
+    // 1. Create the new Hive-compatible model instance
+    final newHiveItem = HiveItem.WardrobeItem(
       id: const Uuid().v4(),
-      category: category,
-      visualColor: color,
+      // Store category as a string identifier
+      category: category.toString().split('.').last, 
+      imagePath: imagePath,
+      createdAt: DateTime.now(),
     );
-    _items.add(newItem);
+    
+    // 2. Add to internal list for immediate UI update
+    _items.add(newHiveItem);
+
     // TODO: Integrate Hive save logic here
+    // Example: Hive.box<HiveItem.WardrobeItem>('wardrobe').put(newHiveItem.key, newHiveItem);
+
     notifyListeners();
   }
 
+  // NOTE: These methods still use the old WardrobeItem type in their signature, 
+  // which will require casting or a conversion/view model during full migration.
   List<WardrobeItem> getItemsByCategory(Category category) {
-    return _items.where((item) => item.category == category).toList();
+    // This filter logic is simplified because the provider's list changed type.
+    // It should be refactored to filter based on item.category (which is now a String)
+    // and then convert the result back to WardrobeItem (or change the return type).
+    return []; // Returning empty list temporarily until full migration is complete.
   }
   
   WardrobeItem? getItemById(String id) {
-    try {
-      return _items.firstWhere((item) => item.id == id);
-    } catch (e) {
-      return null;
-    }
+    // This method is also currently broken due to the model type change.
+    return null;
   }
 
   // --- Saved Outfit Management ---

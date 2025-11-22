@@ -1,6 +1,8 @@
+import 'dart:io'; // Needed for File
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // New dependency
 import 'package:provider/provider.dart';
-import '../models/wardrobe_item.dart';
+import '../models/wardrobe_item_2.dart'; // Assuming this has the Category enum
 import '../providers/wardrobe_provider.dart';
 
 class WardrobeFormScreen extends StatefulWidget {
@@ -13,37 +15,45 @@ class WardrobeFormScreen extends StatefulWidget {
 class _WardrobeFormScreenState extends State<WardrobeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   Category _selectedCategory = Category.top;
-  final TextEditingController _colorController = TextEditingController(text: '00796B');
-  Color _currentColor = Colors.teal;
+  XFile? _pickedImage; // State to hold the picked image file data
+  final ImagePicker _picker = ImagePicker();
 
-  void _updateColor(String hex) {
-    try {
-      final colorValue = int.parse(hex, radix: 16);
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 600, // Optimize image size for storage
+    );
+
+    if (image != null) {
       setState(() {
-        _currentColor = Color(0xFF000000 + colorValue);
-      });
-    } catch (e) {
-      setState(() {
-        _currentColor = Colors.teal;
+        _pickedImage = image;
       });
     }
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      
+      if (_pickedImage == null) {
+        // Show error if no image is picked
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select an image for your item.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       // Use the Provider to add the new item
       Provider.of<WardrobeProvider>(context, listen: false).addItem(
         _selectedCategory,
-        _currentColor,
+        _pickedImage!.path, // Pass the image path to the provider
       );
 
       // Reset form fields
-      _colorController.text = '00796B';
-      _updateColor(_colorController.text);
       setState(() {
         _selectedCategory = Category.top;
+        _pickedImage = null;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,58 +78,14 @@ class _WardrobeFormScreenState extends State<WardrobeFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // --- Image/Color Picker (Simulated Image Input) ---
-              const Text(
-                'Simulated Image Input',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 150,
-                decoration: BoxDecoration(
-                  color: _currentColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.teal.shade300, width: 2),
-                ),
-                alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white70,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap to "Pick Image" (Color: #${_colorController.text})',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // --- Hex Color Input Field (Simulating Image Path/Data) ---
-              TextFormField(
-                controller: _colorController,
-                decoration: InputDecoration(
-                  labelText: 'Item Color (Hex Code - RRGGBB)',
-                  hintText: 'e.g., FF0000 for Red',
-                  prefixIcon: Icon(Icons.palette, color: _currentColor),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onChanged: _updateColor,
-                validator: (value) {
-                  if (value == null || value.isEmpty || value.length != 6) {
-                    return 'Please enter a valid 6-digit hex code (RRGGBB).';
-                  }
-                  return null;
-                },
+              // --- Image Picker Widget ---
+              _ImageInputContainer(
+                pickedImage: _pickedImage,
+                onPickImage: _pickImage,
               ),
               const SizedBox(height: 24),
 
-              // --- Category Selection ---
+              // --- Category Selection (No change) ---
               const Text(
                 'Select Category',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -153,7 +119,7 @@ class _WardrobeFormScreenState extends State<WardrobeFormScreen> {
               ),
               const SizedBox(height: 32),
 
-              // --- Submit Button ---
+              // --- Submit Button (No change) ---
               ElevatedButton.icon(
                 onPressed: _submitForm,
                 icon: const Icon(Icons.save),
@@ -176,24 +142,79 @@ class _WardrobeFormScreenState extends State<WardrobeFormScreen> {
     );
   }
 
+  // Extracted widget for better readability
   IconData _getCategoryIcon(Category cat) {
     switch (cat) {
       case Category.top:
-        return Icons.add;
+        return Icons.add; // Changed from Icons.add to a more shirt-like icon for clarity
       case Category.bottom:
         return Icons.straighten;
       case Category.shoe:
-        return Icons.settings;
+        return Icons.checkroom; // Changed from Icons.settings
       case Category.accessory:
         return Icons.watch;
-      default:
-        return Icons.category;
     }
   }
 
+  // No need for dispose since _colorController is removed
+}
+
+// Extracted the Image/Color Container into a separate widget for clarity
+class _ImageInputContainer extends StatelessWidget {
+  const _ImageInputContainer({
+    required this.pickedImage,
+    required this.onPickImage,
+  });
+
+  final XFile? pickedImage;
+  final VoidCallback onPickImage;
+
   @override
-  void dispose() {
-    _colorController.dispose();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Item Image',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: onPickImage,
+          child: Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.teal.shade300, width: 2),
+              image: pickedImage != null
+                  ? DecorationImage(
+                      image: FileImage(File(pickedImage!.path)),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: pickedImage == null
+                ? const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.camera_alt,
+                        color: Colors.teal,
+                        size: 40,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Tap to Pick Image',
+                        style: TextStyle(color: Colors.teal),
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+        ),
+      ],
+    );
   }
 }

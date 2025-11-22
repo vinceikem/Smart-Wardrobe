@@ -1,17 +1,40 @@
-class SavedOutfit {
-  final String id; // Unique ID for the saved outfit
-  final String description; // Description returned from the backend
-  final List<String> itemIds; // List of WardrobeItem IDs that make up the outfit
-  final String style;
+import 'package:hive/hive.dart';
+
+part 'saved_outfit.g.dart'; // Remember to run 'flutter pub run build_runner build'
+
+@HiveType(typeId: 1) // Ensure this typeId is unique across your application
+class SavedOutfit extends HiveObject {
+  @HiveField(0)
+  final String id;
+
+  @HiveField(1)
+  final String description; 
+  
+  @HiveField(2)
+  final String style; 
+
+  @HiveField(3)
   final String event;
+
+  @HiveField(4)
   final DateTime dateSaved;
+
+  @HiveField(5)
+  final List<String> itemIds; // List of IDs of the WardrobeItems used
+
+  @HiveField(6)
+  final String imageUrl; // URL to the generated outfit image
 
   SavedOutfit({
     required this.id,
-    required this.description,
-    required this.itemIds,
+    this.description = '',
     required this.style,
     required this.event,
     required this.dateSaved,
+    required this.itemIds,
+    required this.imageUrl, // New required field
   });
+
+  /// The key used for storing in Hive: "outfit-<id>"
+  String get key => 'outfit-$id';
 }

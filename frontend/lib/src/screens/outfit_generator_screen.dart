@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/src/services/prompt_service.dart';
 import 'package:provider/provider.dart';
-import '../models/wardrobe_item.dart';// NOTE: Requires dart:io for File
+import '../models/wardrobe_item_2.dart'; // Contains Category enum
+import '../models/wardrobe_item.dart' as WardrobeItemModel; // Import Hive Model
 import '../providers/wardrobe_provider.dart';
 import 'generated_outfit_screen.dart';
-import 'dart:io'; // Needed for the mock File object
+import 'dart:io'; // Needed for the File object
 
 class OutfitGeneratorScreen extends StatefulWidget {
   const OutfitGeneratorScreen({super.key});
@@ -23,7 +24,7 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
 
   String _style = 'Casual';
   String _event = 'Everyday';
-  String _weather = 'Sunny'; // Required by service
+  String _weather = 'Sunny';
 
   void _toggleSelection(Category category, String itemId) {
     setState(() {
@@ -41,7 +42,6 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
   }
 
   void _generateOutfit(WardrobeProvider provider) {
-    // 1. Prepare ImageUploadData (Mock File since real file picker is not available)
     List<ImageUploadData> uploadData = [];
     
     final allSelectedIds = [
@@ -57,11 +57,15 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
       return;
     }
 
+    // 1. Prepare ImageUploadData by getting the actual file path
     for (var id in allSelectedIds) {
-      // Placeholder for real File object. This is where you would fetch the file path.
+      // Find the item using the ID. Since provider.items is now List<WardrobeItemModel.WardrobeItem>, we use that.
+      final item = provider.items.firstWhere((i) => i.id == id); 
+      
+      // Use the actual image path from the Hive model
       uploadData.add(ImageUploadData(
-        MockFile(), 
-        id,
+        File(item.imagePath), // <--- CRITICAL CHANGE: Use actual path
+        item.id, // Use the item ID as the original filename for identification
       ));
     }
 
@@ -76,9 +80,7 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
     ));
   }
   
-  // NOTE: This mock File implementation is strictly for making the code compile 
-  // without a real environment. You must replace it with actual file handling.
-  File MockFile() => File('mock_path'); 
+  // Removed MockFile() since we are using the actual File path now.
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +95,9 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ..._buildCategorySelectors(provider),
+            // NOTE: The provider.getItemsByCategory needs to be refactored 
+            // to return the Hive model type (List<WardrobeItemModel.WardrobeItem>).
+            ..._buildCategorySelectors(provider), 
             const SizedBox(height: 24),
             _buildConfigurationInputs(),
             const SizedBox(height: 32),
@@ -116,19 +120,30 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
     );
   }
 
+  // Helper method updated to accept the Hive model list.
   List<Widget> _buildCategorySelectors(WardrobeProvider provider) {
     return [
       for (var category in [Category.top, Category.bottom, Category.shoe])
-        _CategorySelector(
-          category: category,
-          items: provider.getItemsByCategory(category),
-          selectedIds: _selectedItemIds[category]!,
-          onToggle: _toggleSelection,
+        Consumer<WardrobeProvider>(
+          builder: (context, p, child) {
+            // CRITICAL: We rely on the provider to filter and cast the list correctly
+            final items = p.items.where((i) => i.category == category.toString().split('.').last)
+                .map((item) => item as WardrobeItemModel.WardrobeItem)
+                .toList();
+                
+            return _CategorySelector(
+              category: category,
+              items: items,
+              selectedIds: _selectedItemIds[category]!,
+              onToggle: _toggleSelection,
+            );
+          }
         ),
     ];
   }
 
   Widget _buildConfigurationInputs() {
+    // ... (No change)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -156,10 +171,10 @@ class _OutfitGeneratorScreenState extends State<OutfitGeneratorScreen> {
   }
 }
 
-// Widget for item selection in the generator screen
+// Updated to use the Hive-compatible model
 class _CategorySelector extends StatelessWidget {
   final Category category;
-  final List<WardrobeItem> items;
+  final List<WardrobeItemModel.WardrobeItem> items; // <-- Changed type
   final List<String> selectedIds;
   final Function(Category, String) onToggle;
 
@@ -204,26 +219,47 @@ class _CategorySelector extends StatelessWidget {
                   width: 100,
                   margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(
-                    color: item.visualColor, // Use item color
+                    // CRITICAL CHANGE: Display the actual image
+                    image: item.imagePath != null && File(item.imagePath).existsSync()
+                        ? DecorationImage(
+                            image: FileImage(File(item.imagePath)),
+                            fit: BoxFit.cover,
+                          )
+                        : null, // Fallback to color if no image
+                    color: Colors.grey.shade400, // Background color for placeholder
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected ? Colors.pink : Colors.grey.shade300,
+                      color: isSelected ? Colors.pink : Colors.transparent,
                       width: isSelected ? 3.0 : 1.0,
                     ),
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Display a fallback icon if image is missing
+                      if (item.imagePath == null || !File(item.imagePath).existsSync())
+                          Icon(
+                            Icons.checkroom, 
+                            color: Colors.white70,
+                            size: 40
+                          ),
+
                       Icon(
                         Icons.check_circle, 
-                        color: isSelected ? Colors.white : Colors.transparent, 
+                        color: isSelected ? Colors.pink.shade100.withOpacity(0.8) : Colors.transparent, 
                         size: 40
                       ),
                       Positioned(
                         bottom: 4,
-                        child: Text(
-                          item.category.display, 
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
+                        child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(4)),
+                            child: Text(
+                              item.category, // Display the category string
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
+                            )
                         ),
                       )
                     ],
