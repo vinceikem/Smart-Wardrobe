@@ -8,10 +8,10 @@ class SavedOutfit extends HiveObject {
   final String id;
 
   @HiveField(1)
-  final String description; 
-  
+  final String description;
+
   @HiveField(2)
-  final String style; 
+  final String style;
 
   @HiveField(3)
   final String event;
@@ -32,7 +32,7 @@ class SavedOutfit extends HiveObject {
     required this.event,
     required this.dateSaved,
     required this.itemIds,
-    required this.imageUrl, // New required field
+    required this.imageUrl,
   });
 
   /// The key used for storing in Hive: "outfit- `<`id>"

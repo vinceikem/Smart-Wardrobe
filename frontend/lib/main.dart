@@ -5,13 +5,14 @@ import 'package:frontend/src/providers/wardrobe_provider.dart';
 import 'package:frontend/src/screens/home_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Import local files
 
-void main() async{
-   WidgetsFlutterBinding.ensureInitialized();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  // We wrap the entire app in the WardrobeProvider
+  await dotenv.load(fileName: ".env");
   Hive.registerAdapter(WardrobeItemAdapter());
   Hive.registerAdapter(SavedOutfitAdapter());
 
@@ -42,7 +43,6 @@ class SmartWardrobeApp extends StatelessWidget {
           elevation: 4,
         ),
       ),
-      // The HomeScreen handles all internal navigation via the BottomNavigationBar
       home: const HomeScreen(),
     );
   }

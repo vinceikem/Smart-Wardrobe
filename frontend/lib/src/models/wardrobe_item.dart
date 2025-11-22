@@ -24,7 +24,6 @@ class WardrobeItem extends HiveObject {
     required this.createdAt,
   });
 
-  /// Key format used throughout the app: "<'category>-<'id>"
   @override
   String get key => '$category-$id';
 }
