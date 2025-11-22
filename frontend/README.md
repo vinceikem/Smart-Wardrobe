@@ -1,16 +1,129 @@
-# frontend
+#  Smart Wardrobe Assistant (Flutter)
 
-A new Flutter project.
+A modern mobile application designed to simplify wardrobe management and
+generate intelligent, personalized outfits using AI. The app blends
+local data persistence, smooth UI/UX, and external AI integration to
+deliver accurate styling recommendations based on user input.
 
-## Getting Started
+## ✨ Features
 
-This project is a starting point for a Flutter application.
+###  Intelligent Outfit Generation
 
-A few resources to get you started if this is your first Flutter project:
+Generate a complete outfit consisting of: - **Top** - **Bottom** -
+**Shoes** - **Accessory**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Outfits are generated based on: - Selected **Style** - **Event** type -
+Real-time **Weather** conditions
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Images of wardrobe items are also sent to the AI to improve accuracy.
+
+###  AI Style Analysis
+
+Each generated outfit includes: - A detailed explanation of why the
+outfit works
+- A breakdown of color pairing, event suitability, and style
+consistency
+- A natural-language description users can save or reference later
+
+###  Wardrobe Management
+
+Organize all wardrobe items with: - Category-based grouping
+- Item image preview
+- Local storage using **Hive**
+- Ability to add, view, and manage items anytime --- works offline
+
+###  Saved Outfits
+
+Save any generated outfit to view later.
+Saved data includes: - All selected **WardrobeItem IDs** - The AI's
+descriptive analysis
+- Date generated
+- Category/style metadata
+
+###  Clean UI/UX
+
+-   Smooth screen transitions
+-   Floating action button (FAB) interactions
+-   Minimalist wardrobe grid layout
+-   Consistent spacing and design system
+
+## ⚙️ Architecture & Tech Stack
+
+###  State Management --- Provider
+
+Manages: - Wardrobe state
+- Current filters
+- Generated outfit data
+- Saving and retrieving outfits
+
+###  Local Persistence --- Hive
+
+Lightweight NoSQL local database storing: - `WardrobeItem` -
+`SavedOutfit`
+
+###  AI Integration --- PromptService
+
+Handles communication with the external AI.
+Expected response:
+
+``` json
+{
+  "top": "string",
+  "bottom": "string",
+  "shoe": "string",
+  "accessory": "string",
+  "response": "AI explanation text here"
+}
+```
+
+## 🚀 Installation & Setup
+
+### 1. Clone the Repository
+
+    git clone repo
+    cd smart-wardrobe-assistant
+
+### 2. Install Dependencies
+
+    flutter pub get
+
+### 3. Generate Hive Adapters
+
+    flutter packages pub run build_runner build --delete-conflicting-outputs
+
+### 4. Configure AI Service
+
+Replace `_callOutfitService()` logic with real API integration.
+
+### 5. Run the App
+
+    flutter run
+
+## 📸 Screenshots
+
+    ![Outfit Generation](screenshots/outfit_generation.jpg)
+    ![Wardrobe Grid](screenshots/wardrobe_grid.jpg)
+    ![Generated Outfit](screenshots/generated_outfit.jpg)
+
+## 🧪 Folder Structure
+
+    lib/
+     ├── models/
+     ├── providers/
+     ├── services/
+     ├── screens/
+     ├── widgets/
+     └── main.dart
+
+## 📄 License
+
+MIT License
+
+## 🤝 Contributing
+
+Fork → Branch → Commit → PR
+
+## 📬 Contact
+
+Email: vince.ikem@gmail.com\
+GitHub: https://github.com/vinceikem
