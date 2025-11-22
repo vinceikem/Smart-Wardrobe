@@ -14,7 +14,7 @@ class AIService {
         for (const image of images) {
             imageParts.push({
                 inlineData: {
-                    data: fs.readFileSync(`${image.path}`).toString("base64"),
+                    data: image.buffer.toString("base64"),
                     mimeType: image.mimetype,
                 },
                 id: this.getIdFromFileName(image.filename),
