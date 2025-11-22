@@ -101,9 +101,9 @@ Replace `_callOutfitService()` logic with real API integration.
 
 ## 📸 Screenshots
 
-    ![Outfit Generation](screenshots/outfit_generation.jpg)
-    ![Wardrobe Grid](screenshots/wardrobe_grid.jpg)
-    ![Generated Outfit](screenshots/generated_outfit.jpg)
+![wardrobe_grid](https://github.com/user-attachments/assets/db6d2ee4-6834-4034-a7cc-c6953b61a215)
+![generated_outfit](https://github.com/user-attachments/assets/9eae798d-a308-41bd-9aff-ae03dacd6427)
+![outfit_generation](https://github.com/user-attachments/assets/d91dc614-7690-4ae2-a36b-d500b7148fd6)
 
 ## 🧪 Folder Structure
 
