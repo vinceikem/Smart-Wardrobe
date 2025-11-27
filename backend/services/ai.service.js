@@ -60,9 +60,13 @@ class AIService {
                             type: Type.STRING,
                             description: "The best from all bottom id respond in the full id given including []",
                         },
+                        shoe:{
+                            type: Type.STRING,
+                            description: "The best from all shoe id respond in the full id given including []",
+                        },
                         response:{
                             type:Type.STRING,
-                            description:"Short description on reason and confidence level"
+                            description:"Short description on reason and confidence level /10"
                         }
                     },
                 },

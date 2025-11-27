@@ -243,8 +243,6 @@ class _WardrobeFormScreenState extends State<WardrobeFormScreen> {
         return Icons.straighten;
       case Category.shoe:
         return Icons.do_not_step;
-      case Category.accessory:
-        return Icons.watch;
     }
   }
 }

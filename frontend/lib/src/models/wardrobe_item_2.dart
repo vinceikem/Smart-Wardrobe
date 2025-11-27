@@ -1,10 +1,9 @@
-
 // Categories for wardrobe items
 enum Category {
   top('Top'),
   bottom('Bottom'),
-  shoe('Shoe'),
-  accessory('Accessory');
+  shoe('Shoe');
+  //accessory('Accessory');
 
   final String display;
   const Category(this.display);

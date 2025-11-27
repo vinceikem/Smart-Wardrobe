@@ -89,25 +89,12 @@ class PromptService {
       Response response = await _dio.post(
         apiEndpoint,
         data: formData,
-        onSendProgress: (sent, total) {
-          if (total != 0) {
-            print(
-              'Upload progress: ${(sent / total * 100).toStringAsFixed(0)}%',
-            );
-          }
-        },
       );
-      print('✅ Upload Successful. Response Status: ${response.statusCode}');
-      print(response.data);
       return response.data is Map
           ? response.data
           : {"success": true, "data": response.data};
     } on DioException catch (e) {
-      print('❌ Upload Failed!');
-      print('Error: ${e.message}');
       if (e.response != null) {
-        print('Response status: ${e.response!.statusCode}');
-        // Optional: return backend error message if available
         if (e.response!.data is Map &&
             e.response!.data.containsKey('message')) {
           return {"success": false, "error": e.response!.data['message']};

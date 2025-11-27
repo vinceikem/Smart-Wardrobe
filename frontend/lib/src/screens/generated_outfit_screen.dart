@@ -179,7 +179,7 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
             generatedItemIdsMap.forEach((key, itemId) {
               final category = Category.values.firstWhere(
                 (e) => e.toString().split('.').last == key,
-                orElse: () => Category.accessory,
+                
               );
 
               final item = provider.items.cast<WardrobeItem?>().firstWhere(
@@ -272,7 +272,6 @@ class _GeneratedOutfitScreenState extends State<GeneratedOutfitScreen> {
       Category.top,
       Category.bottom,
       Category.shoe,
-      Category.accessory,
     ];
 
     final recommendedItems = orderedCategories
